@@ -70,3 +70,120 @@ pub mod aoc_2024_01 {
         println!("Similarity: {}", _aoc_2024_01_02(a, b))
     }
 }
+
+pub mod aoc_2024_02 {
+    use std::io::BufRead;
+
+pub enum Direction {
+    Ascending,
+    Descending,
+}
+
+pub fn _aoc_2024_02_01<I>(reports: I) -> u32
+where
+    I: IntoIterator<Item = Vec<i32>>,
+{
+    let mut num_safe = 0;
+    'report: for report in reports.into_iter() {
+        let mut dir: Option<Direction> = None;
+        for i in 1..report.len() {
+            let diff = report[i - 1] - report[i];
+            match dir {
+                Some(Direction::Ascending) => {
+                    if diff <= 0 {
+                        continue 'report;
+                    }
+                }
+                Some(Direction::Descending) => {
+                    if diff >= 0 {
+                        continue 'report;
+                    }
+                }
+                None => {
+                    if diff > 0 {
+                        dir = Some(Direction::Ascending)
+                    } else {
+                        dir = Some(Direction::Descending)
+                    }
+                }
+            }
+            if diff.abs() < 1 || diff.abs() > 3 {
+                continue 'report;
+            }
+        }
+        num_safe += 1;
+    }
+    return num_safe;
+}
+
+pub fn aoc_2024_02_01() {
+    // let file_path = "data/2024/02-example.txt";
+    let file_path = "data/2024/02.txt";
+    let file = std::fs::File::open(file_path).expect("file wasn't found.");
+    let reader = std::io::BufReader::new(file);
+
+    let reports = reader.lines().map(|line| {
+        line.unwrap()
+            .split_whitespace()
+            .map(|e| e.parse::<i32>().unwrap())
+            .collect::<Vec<i32>>()
+    });
+
+    println!("Safe: {}", _aoc_2024_02_01(reports))
+}
+
+
+pub fn is_safe(diff: &Vec<i32>) -> bool {
+    let dir = diff[0];
+    let mut i = 0;
+
+    while i < diff.len() {
+        let d = diff[i];
+        if dir * d < 0 || d.abs() < 1 || d.abs() > 3 {
+            return false;
+        }
+        i += 1;
+    }
+    return true;
+}
+
+pub fn aoc_2024_02_02() {
+    // let file_path = "data/2024/02-example.txt";
+    let file_path = "data/2024/02.txt";
+    let file = std::fs::File::open(file_path).expect("file wasn't found.");
+    let reader = std::io::BufReader::new(file);
+
+    let reports = reader.lines().map(|line| {
+        line.unwrap()
+            .split_whitespace()
+            .map(|e| e.parse::<i32>().unwrap())
+            .collect::<Vec<i32>>()
+    });
+
+    let num_safe = reports
+        .filter(|report| {
+            let mut safe = false;
+            for i in 0..report.len() {
+                let _report = [&report[0..i],
+                        &report[i + 1..report.len()]].concat().to_vec();
+
+                let mut diff: Vec<i32> = Vec::new();
+                for i in 1.._report.len() {
+                    diff.push(_report[i] - _report[i - 1])
+                }
+                
+                safe |= is_safe(
+                    &diff
+                );
+                if safe {
+                    break;
+                }
+            }
+            safe
+        })
+        .count();
+
+    println!("Safe: {}", num_safe);
+}
+
+}
