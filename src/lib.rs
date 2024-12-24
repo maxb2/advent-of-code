@@ -477,13 +477,15 @@ pub mod aoc_2024_04 {
                     continue;
                 }
 
-                let NE = data[y - 1][x + 1];
-                let SE = data[y + 1][x + 1];
-                let NW = data[y - 1][x - 1];
-                let SW = data[y + 1][x - 1];
+                let northeast = data[y - 1][x + 1];
+                let southeast = data[y + 1][x + 1];
+                let northwest = data[y - 1][x - 1];
+                let southwest = data[y + 1][x - 1];
 
-                if ((NE == 'M' && SW == 'S') || (NE == 'S' && SW == 'M'))
-                    && ((NW == 'M' && SE == 'S') || (NW == 'S' && SE == 'M'))
+                if ((northeast == 'M' && southwest == 'S')
+                    || (northeast == 'S' && southwest == 'M'))
+                    && ((northwest == 'M' && southeast == 'S')
+                        || (northwest == 'S' && southeast == 'M'))
                 {
                     amount += 1;
                 }
@@ -495,10 +497,7 @@ pub mod aoc_2024_04 {
 }
 
 pub mod aoc_2024_05 {
-    use std::{
-        collections::{HashMap, HashSet},
-        io::BufRead,
-    };
+    use std::{collections::HashMap, io::BufRead};
 
     pub fn aoc_2024_05_01() {
         // let file_path = "data/2024/05-example.txt";
@@ -597,7 +596,7 @@ pub mod aoc_2024_05 {
 
         let mut acc = 0u32;
 
-        'line: for line in reader.lines().map(|r| r.unwrap()) {
+        for line in reader.lines().map(|r| r.unwrap()) {
             if line.contains('|') {
                 let nums: Vec<u32> = line.split('|').map(|e| e.parse::<u32>().unwrap()).collect();
                 rules.entry(nums[1]).or_insert(vec![nums[0]]).push(nums[0]);
