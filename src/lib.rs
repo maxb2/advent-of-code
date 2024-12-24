@@ -493,3 +493,191 @@ pub mod aoc_2024_04 {
         println!("Amount: {}", amount)
     }
 }
+
+pub mod aoc_2024_05 {
+    use std::{
+        collections::{HashMap, HashSet},
+        io::BufRead,
+    };
+    
+    pub fn aoc_2024_05_01() {
+        // let file_path = "data/2024/05-example.txt";
+        let file_path = "data/2024/05.txt";
+        let file = std::fs::File::open(file_path).expect("file wasn't found.");
+        let reader = std::io::BufReader::new(file);
+    
+        let mut rules: HashMap<u32, Vec<u32>> = HashMap::new();
+    
+        let empty: Vec<u32> = Vec::new();
+    
+        let mut acc = 0u32;
+    
+        'line: for line in reader.lines().map(|r| r.unwrap()) {
+            if line.contains('|') {
+                let nums: Vec<u32> = line.split('|').map(|e| e.parse::<u32>().unwrap()).collect();
+                rules.entry(nums[1]).or_insert(vec![nums[0]]).push(nums[0]);
+            }
+    
+            if line.contains(",") {
+                let mut pages: Vec<u32> = Vec::new();
+                for page in line.split(',').map(|e| e.parse::<u32>().unwrap()) {
+                    // println!("Check: {}", page);
+                    for previous_page in pages.iter() {
+                        let prev_rule = rules.get(previous_page).unwrap_or(&empty);
+                        // println!("{}?{} {}|{:?}",previous_page, page, previous_page, prev_rule);
+                        if prev_rule.contains(&page) {
+                            // println!("BAD");
+                            continue 'line;
+                        }
+                    }
+    
+                    pages.push(page);
+                }
+                println!("GOOD: {}", line);
+                let middle = pages[pages.len() / 2];
+                println!("{}", middle);
+                acc += middle;
+            }
+        }
+        println!("Value: {}", acc);
+    }
+    
+    pub struct Page {
+        value: u32,
+        before: Vec<u32>,
+    }
+    
+    impl PartialOrd for Page {
+        fn ge(&self, other: &Self) -> bool {
+            !other.before.contains(&self.value)
+        }
+        fn lt(&self, other: &Self) -> bool {
+            other.before.contains(&self.value)
+        }
+    
+        fn gt(&self, other: &Self) -> bool {
+            self.before.contains(&other.value)
+        }
+    
+        fn le(&self, other: &Self) -> bool {
+            !self.before.contains(&other.value)
+        }
+    
+        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+            if other.before.contains(&self.value) {
+                return Some(std::cmp::Ordering::Less);
+            };
+    
+            if self.before.contains(&other.value) {
+                return Some(std::cmp::Ordering::Greater);
+            }
+    
+            Some(std::cmp::Ordering::Equal)
+        }
+    }
+    
+    impl PartialEq for Page {
+        fn eq(&self, other: &Self) -> bool {
+            !self.lt(other) && !other.lt(self)
+        }
+        fn ne(&self, other: &Self) -> bool {
+            self.lt(other) || other.lt(self)
+        }
+    }
+    
+    pub fn aoc_2024_05_02() {
+        // let file_path = "data/2024/05-example.txt";
+        let file_path = "data/2024/05.txt";
+        let file = std::fs::File::open(file_path).expect("file wasn't found.");
+        let reader = std::io::BufReader::new(file);
+    
+        let mut rules: HashMap<u32, Vec<u32>> = HashMap::new();
+    
+        let empty: Vec<u32> = Vec::new();
+    
+        let mut acc = 0u32;
+    
+        'line: for line in reader.lines().map(|r| r.unwrap()) {
+            if line.contains('|') {
+                let nums: Vec<u32> = line.split('|').map(|e| e.parse::<u32>().unwrap()).collect();
+                rules.entry(nums[1]).or_insert(vec![nums[0]]).push(nums[0]);
+            }
+    
+            if line.contains(",") {
+                let mut pages: Vec<u32> = Vec::new();
+                let mut _pages: Vec<u32> = line.split(',').map(|e| e.parse::<u32>().unwrap()).collect();
+                let mut bad = false;
+                'page: for page in _pages.iter() {
+                    bad = false;
+                    // println!("Check: {}", page);
+                    for previous_page in pages.iter() {
+                        let prev_rule = rules.get(previous_page).unwrap_or(&empty);
+                        // println!("{}?{} {}|{:?}",previous_page, page, previous_page, prev_rule);
+                        if prev_rule.contains(&page) {
+                            println!("BAD");
+                            bad = true;
+                            break 'page;
+                        }
+                    }
+                    pages.push(*page);
+                }
+                if bad {
+                    _pages.sort_by(|a, b| {
+                        Page {
+                            value: *a,
+                            before: rules.get(a).unwrap_or(&empty).to_vec(),
+                        }
+                        .partial_cmp(&Page {
+                            value: *b,
+                            before: rules.get(b).unwrap_or(&empty).to_vec(),
+                        })
+                        .unwrap()
+                    });
+                    let middle = _pages[_pages.len() / 2];
+                    println!("{}", middle);
+                    acc += middle;
+                }
+            }
+        }
+        println!("Value: {}", acc);
+    }
+    
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+    
+        #[test]
+        fn page_ordering() {
+            let page1 = Page {
+                value: 10,
+                before: vec![2, 3, 5],
+            };
+    
+            let page2 = Page {
+                value: 2,
+                before: vec![1],
+            };
+    
+            let page3 = Page {
+                value: 3,
+                before: vec![2],
+            };
+    
+            assert!(page2 < page1);
+    
+            let mut pages = vec![&page1, &page2];
+    
+            pages.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    
+            assert!(pages == vec![&page2, &page1]);
+    
+            let mut pages = vec![&page1, &page2, &page3];
+    
+            pages.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    
+            assert!(pages == vec![&page2, &page3, &page1]);
+        }
+    }
+    
+
+}
