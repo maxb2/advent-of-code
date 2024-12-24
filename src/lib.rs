@@ -74,116 +74,233 @@ pub mod aoc_2024_01 {
 pub mod aoc_2024_02 {
     use std::io::BufRead;
 
-pub enum Direction {
-    Ascending,
-    Descending,
-}
+    pub enum Direction {
+        Ascending,
+        Descending,
+    }
 
-pub fn _aoc_2024_02_01<I>(reports: I) -> u32
-where
-    I: IntoIterator<Item = Vec<i32>>,
-{
-    let mut num_safe = 0;
-    'report: for report in reports.into_iter() {
-        let mut dir: Option<Direction> = None;
-        for i in 1..report.len() {
-            let diff = report[i - 1] - report[i];
-            match dir {
-                Some(Direction::Ascending) => {
-                    if diff <= 0 {
-                        continue 'report;
+    pub fn _aoc_2024_02_01<I>(reports: I) -> u32
+    where
+        I: IntoIterator<Item = Vec<i32>>,
+    {
+        let mut num_safe = 0;
+        'report: for report in reports.into_iter() {
+            let mut dir: Option<Direction> = None;
+            for i in 1..report.len() {
+                let diff = report[i - 1] - report[i];
+                match dir {
+                    Some(Direction::Ascending) => {
+                        if diff <= 0 {
+                            continue 'report;
+                        }
+                    }
+                    Some(Direction::Descending) => {
+                        if diff >= 0 {
+                            continue 'report;
+                        }
+                    }
+                    None => {
+                        if diff > 0 {
+                            dir = Some(Direction::Ascending)
+                        } else {
+                            dir = Some(Direction::Descending)
+                        }
                     }
                 }
-                Some(Direction::Descending) => {
-                    if diff >= 0 {
-                        continue 'report;
-                    }
-                }
-                None => {
-                    if diff > 0 {
-                        dir = Some(Direction::Ascending)
-                    } else {
-                        dir = Some(Direction::Descending)
-                    }
+                if diff.abs() < 1 || diff.abs() > 3 {
+                    continue 'report;
                 }
             }
-            if diff.abs() < 1 || diff.abs() > 3 {
-                continue 'report;
+            num_safe += 1;
+        }
+        return num_safe;
+    }
+
+    pub fn aoc_2024_02_01() {
+        // let file_path = "data/2024/02-example.txt";
+        let file_path = "data/2024/02.txt";
+        let file = std::fs::File::open(file_path).expect("file wasn't found.");
+        let reader = std::io::BufReader::new(file);
+
+        let reports = reader.lines().map(|line| {
+            line.unwrap()
+                .split_whitespace()
+                .map(|e| e.parse::<i32>().unwrap())
+                .collect::<Vec<i32>>()
+        });
+
+        println!("Safe: {}", _aoc_2024_02_01(reports))
+    }
+
+    pub fn is_safe(diff: &Vec<i32>) -> bool {
+        let dir = diff[0];
+        let mut i = 0;
+
+        while i < diff.len() {
+            let d = diff[i];
+            if dir * d < 0 || d.abs() < 1 || d.abs() > 3 {
+                return false;
+            }
+            i += 1;
+        }
+        return true;
+    }
+
+    pub fn aoc_2024_02_02() {
+        // let file_path = "data/2024/02-example.txt";
+        let file_path = "data/2024/02.txt";
+        let file = std::fs::File::open(file_path).expect("file wasn't found.");
+        let reader = std::io::BufReader::new(file);
+
+        let reports = reader.lines().map(|line| {
+            line.unwrap()
+                .split_whitespace()
+                .map(|e| e.parse::<i32>().unwrap())
+                .collect::<Vec<i32>>()
+        });
+
+        let num_safe = reports
+            .filter(|report| {
+                let mut safe = false;
+                for i in 0..report.len() {
+                    let _report = [&report[0..i], &report[i + 1..report.len()]]
+                        .concat()
+                        .to_vec();
+
+                    let mut diff: Vec<i32> = Vec::new();
+                    for i in 1.._report.len() {
+                        diff.push(_report[i] - _report[i - 1])
+                    }
+
+                    safe |= is_safe(&diff);
+                    if safe {
+                        break;
+                    }
+                }
+                safe
+            })
+            .count();
+
+        println!("Safe: {}", num_safe);
+    }
+}
+
+pub mod aoc_2024_03 {
+    use nom::branch::alt;
+    use nom::bytes::complete::tag;
+    use nom::character::complete::anychar;
+    use nom::combinator::value;
+    use nom::multi::{many0, many_till};
+    use nom::sequence::{delimited, preceded, separated_pair};
+    use nom::IResult;
+    
+    use std::io::Read;
+    
+    fn corrupted_parser(s: &str) -> IResult<&str, Vec<(Vec<char>, (i32, i32))>> {
+        many0(many_till(
+            anychar,
+            preceded(
+                tag("mul"),
+                delimited(
+                    tag("("),
+                    separated_pair(
+                        nom::character::complete::i32,
+                        tag(","),
+                        nom::character::complete::i32,
+                    ),
+                    tag(")"),
+                ),
+            ),
+        ))(s)
+    }
+    
+    pub fn aoc_2024_03_01() {
+        // let file_path = "data/2024/03-example.txt";
+        let file_path = "data/2024/03.txt";
+        let file = std::fs::File::open(file_path).expect("file wasn't found.");
+        let mut reader = std::io::BufReader::new(file);
+    
+        let mut data: String = String::new();
+    
+        reader.read_to_string(&mut data).unwrap();
+    
+        let parsed = corrupted_parser(&data).unwrap();
+    
+        let res = parsed
+            .1
+            .iter()
+            .map(|t| t.1)
+            .fold(0, |acc, e| acc + e.0 * e.1);
+    
+        println!("Value: {}", res);
+    }
+    
+    #[derive(Debug, Clone, Copy)]
+    pub enum MulState {
+        Do,
+        Dont,
+        Mul(i32, i32),
+    }
+    
+    pub fn parse_mul(s: &str) -> IResult<&str, MulState> {
+        let (remaining, (x, y)) = preceded(
+            tag("mul"),
+            delimited(
+                tag("("),
+                separated_pair(
+                    nom::character::complete::i32,
+                    tag(","),
+                    nom::character::complete::i32,
+                ),
+                tag(")"),
+            ),
+        )(s)?;
+    
+        Ok((remaining, MulState::Mul(x, y)))
+    }
+    
+    fn corrupted_enabled_parser(s: &str) -> IResult<&str, Vec<(Vec<char>, MulState)>> {
+        let res = many0(many_till(
+            anychar,
+            alt((
+                value(MulState::Do, tag("do()")),
+                value(MulState::Dont, tag("don't()")),
+                parse_mul,
+            )),
+        ))(s);
+    
+        res
+    }
+    
+    pub fn aoc_2024_03_02() {
+        // let file_path = "data/2024/03-example2.txt";
+        let file_path = "data/2024/03.txt";
+        let file = std::fs::File::open(file_path).expect("file wasn't found.");
+        let mut reader = std::io::BufReader::new(file);
+    
+        let mut data: String = String::new();
+    
+        reader.read_to_string(&mut data).unwrap();
+    
+        let parsed = corrupted_enabled_parser(&data).unwrap();
+    
+        let mut res = 0;
+    
+        let mut do_mul = true;
+    
+        for (_, mul) in parsed.1.iter() {
+            match mul {
+                MulState::Do => do_mul = true,
+                MulState::Dont => do_mul = false,
+                MulState::Mul(x, y) => {
+                    if do_mul {
+                        res += x * y;
+                    }
+                }
             }
         }
-        num_safe += 1;
+    
+        println!("Value: {}", res);
     }
-    return num_safe;
-}
-
-pub fn aoc_2024_02_01() {
-    // let file_path = "data/2024/02-example.txt";
-    let file_path = "data/2024/02.txt";
-    let file = std::fs::File::open(file_path).expect("file wasn't found.");
-    let reader = std::io::BufReader::new(file);
-
-    let reports = reader.lines().map(|line| {
-        line.unwrap()
-            .split_whitespace()
-            .map(|e| e.parse::<i32>().unwrap())
-            .collect::<Vec<i32>>()
-    });
-
-    println!("Safe: {}", _aoc_2024_02_01(reports))
-}
-
-
-pub fn is_safe(diff: &Vec<i32>) -> bool {
-    let dir = diff[0];
-    let mut i = 0;
-
-    while i < diff.len() {
-        let d = diff[i];
-        if dir * d < 0 || d.abs() < 1 || d.abs() > 3 {
-            return false;
-        }
-        i += 1;
-    }
-    return true;
-}
-
-pub fn aoc_2024_02_02() {
-    // let file_path = "data/2024/02-example.txt";
-    let file_path = "data/2024/02.txt";
-    let file = std::fs::File::open(file_path).expect("file wasn't found.");
-    let reader = std::io::BufReader::new(file);
-
-    let reports = reader.lines().map(|line| {
-        line.unwrap()
-            .split_whitespace()
-            .map(|e| e.parse::<i32>().unwrap())
-            .collect::<Vec<i32>>()
-    });
-
-    let num_safe = reports
-        .filter(|report| {
-            let mut safe = false;
-            for i in 0..report.len() {
-                let _report = [&report[0..i],
-                        &report[i + 1..report.len()]].concat().to_vec();
-
-                let mut diff: Vec<i32> = Vec::new();
-                for i in 1.._report.len() {
-                    diff.push(_report[i] - _report[i - 1])
-                }
-                
-                safe |= is_safe(
-                    &diff
-                );
-                if safe {
-                    break;
-                }
-            }
-            safe
-        })
-        .count();
-
-    println!("Safe: {}", num_safe);
-}
 
 }
