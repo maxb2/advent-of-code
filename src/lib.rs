@@ -499,25 +499,25 @@ pub mod aoc_2024_05 {
         collections::{HashMap, HashSet},
         io::BufRead,
     };
-    
+
     pub fn aoc_2024_05_01() {
         // let file_path = "data/2024/05-example.txt";
         let file_path = "data/2024/05.txt";
         let file = std::fs::File::open(file_path).expect("file wasn't found.");
         let reader = std::io::BufReader::new(file);
-    
+
         let mut rules: HashMap<u32, Vec<u32>> = HashMap::new();
-    
+
         let empty: Vec<u32> = Vec::new();
-    
+
         let mut acc = 0u32;
-    
+
         'line: for line in reader.lines().map(|r| r.unwrap()) {
             if line.contains('|') {
                 let nums: Vec<u32> = line.split('|').map(|e| e.parse::<u32>().unwrap()).collect();
                 rules.entry(nums[1]).or_insert(vec![nums[0]]).push(nums[0]);
             }
-    
+
             if line.contains(",") {
                 let mut pages: Vec<u32> = Vec::new();
                 for page in line.split(',').map(|e| e.parse::<u32>().unwrap()) {
@@ -530,7 +530,7 @@ pub mod aoc_2024_05 {
                             continue 'line;
                         }
                     }
-    
+
                     pages.push(page);
                 }
                 println!("GOOD: {}", line);
@@ -541,12 +541,12 @@ pub mod aoc_2024_05 {
         }
         println!("Value: {}", acc);
     }
-    
+
     pub struct Page {
         value: u32,
         before: Vec<u32>,
     }
-    
+
     impl PartialOrd for Page {
         fn ge(&self, other: &Self) -> bool {
             !other.before.contains(&self.value)
@@ -554,28 +554,28 @@ pub mod aoc_2024_05 {
         fn lt(&self, other: &Self) -> bool {
             other.before.contains(&self.value)
         }
-    
+
         fn gt(&self, other: &Self) -> bool {
             self.before.contains(&other.value)
         }
-    
+
         fn le(&self, other: &Self) -> bool {
             !self.before.contains(&other.value)
         }
-    
+
         fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
             if other.before.contains(&self.value) {
                 return Some(std::cmp::Ordering::Less);
             };
-    
+
             if self.before.contains(&other.value) {
                 return Some(std::cmp::Ordering::Greater);
             }
-    
+
             Some(std::cmp::Ordering::Equal)
         }
     }
-    
+
     impl PartialEq for Page {
         fn eq(&self, other: &Self) -> bool {
             !self.lt(other) && !other.lt(self)
@@ -584,28 +584,29 @@ pub mod aoc_2024_05 {
             self.lt(other) || other.lt(self)
         }
     }
-    
+
     pub fn aoc_2024_05_02() {
         // let file_path = "data/2024/05-example.txt";
         let file_path = "data/2024/05.txt";
         let file = std::fs::File::open(file_path).expect("file wasn't found.");
         let reader = std::io::BufReader::new(file);
-    
+
         let mut rules: HashMap<u32, Vec<u32>> = HashMap::new();
-    
+
         let empty: Vec<u32> = Vec::new();
-    
+
         let mut acc = 0u32;
-    
+
         'line: for line in reader.lines().map(|r| r.unwrap()) {
             if line.contains('|') {
                 let nums: Vec<u32> = line.split('|').map(|e| e.parse::<u32>().unwrap()).collect();
                 rules.entry(nums[1]).or_insert(vec![nums[0]]).push(nums[0]);
             }
-    
+
             if line.contains(",") {
                 let mut pages: Vec<u32> = Vec::new();
-                let mut _pages: Vec<u32> = line.split(',').map(|e| e.parse::<u32>().unwrap()).collect();
+                let mut _pages: Vec<u32> =
+                    line.split(',').map(|e| e.parse::<u32>().unwrap()).collect();
                 let mut bad = false;
                 'page: for page in _pages.iter() {
                     bad = false;
@@ -641,43 +642,240 @@ pub mod aoc_2024_05 {
         }
         println!("Value: {}", acc);
     }
-    
+
     #[cfg(test)]
     mod tests {
         use super::*;
-    
+
         #[test]
         fn page_ordering() {
             let page1 = Page {
                 value: 10,
                 before: vec![2, 3, 5],
             };
-    
+
             let page2 = Page {
                 value: 2,
                 before: vec![1],
             };
-    
+
             let page3 = Page {
                 value: 3,
                 before: vec![2],
             };
-    
+
             assert!(page2 < page1);
-    
+
             let mut pages = vec![&page1, &page2];
-    
+
             pages.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    
+
             assert!(pages == vec![&page2, &page1]);
-    
+
             let mut pages = vec![&page1, &page2, &page3];
-    
+
             pages.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    
+
             assert!(pages == vec![&page2, &page3, &page1]);
         }
     }
-    
+}
 
+pub mod aoc_2024_06 {
+    use std::io::BufRead;
+
+    #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+    pub enum Map {
+        Obstacle,
+        Visited,
+        NotVisited,
+    }
+
+    #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+    pub enum Guard {
+        N,
+        E,
+        S,
+        W,
+    }
+
+    pub fn aoc_2024_06_01() {
+        // let file_path = "data/2024/06-example.txt";
+        let file_path = "data/2024/06.txt";
+        let file = std::fs::File::open(file_path).expect("file wasn't found.");
+        let reader = std::io::BufReader::new(file);
+
+        let mut map: Vec<Vec<Map>> = Vec::new();
+
+        let mut guard_pos = (0i32, 0i32);
+        let mut dir = Guard::N;
+
+        for (_row, line) in reader.lines().map(|l| l.unwrap()).enumerate() {
+            let mut row = vec![];
+            for (col, c) in line.chars().enumerate() {
+                match c {
+                    '.' => row.push(Map::NotVisited),
+                    '#' => row.push(Map::Obstacle),
+                    '^' => {
+                        row.push(Map::Visited);
+                        guard_pos = (_row as i32, col as i32);
+                        dir = Guard::N;
+                    }
+                    _ => unreachable!(),
+                }
+            }
+            map.push(row);
+        }
+
+        let height = map.len() as i32;
+        let width = map[0].len() as i32;
+
+        loop {
+            let new_pos: (i32, i32);
+            match dir {
+                Guard::N => new_pos = (guard_pos.0 - 1, guard_pos.1),
+                Guard::S => new_pos = (guard_pos.0 + 1, guard_pos.1),
+                Guard::E => new_pos = (guard_pos.0, guard_pos.1 + 1),
+                Guard::W => new_pos = (guard_pos.0, guard_pos.1 - 1),
+            }
+
+            // Escaped
+            if new_pos.0 < 0 || new_pos.0 >= height || new_pos.1 < 0 || new_pos.1 >= width {
+                break;
+            }
+
+            // Step
+            match &map[new_pos.0 as usize][new_pos.1 as usize] {
+                Map::Visited => guard_pos = new_pos,
+                Map::NotVisited => {
+                    guard_pos = new_pos;
+                    map[new_pos.0 as usize][new_pos.1 as usize] = Map::Visited
+                }
+                // Don't move, just turn
+                Map::Obstacle => match dir {
+                    Guard::N => dir = Guard::E,
+                    Guard::E => dir = Guard::S,
+                    Guard::S => dir = Guard::W,
+                    Guard::W => dir = Guard::N,
+                },
+            }
+        }
+        println!(
+            "Visited: {}",
+            map.iter()
+                .flatten()
+                .filter(|spot| **spot == Map::Visited)
+                .count()
+        );
+    }
+
+    pub enum WalkResult {
+        Escape(u32),
+        Cycle,
+    }
+
+    pub fn walk(mut map: Vec<Vec<Map>>, start_pos: (i32, i32), start_dir: Guard) -> WalkResult {
+        let mut guard_pos = start_pos.clone();
+        let mut dir = start_dir.clone();
+
+        let height = map.len() as i32;
+        let width = map[0].len() as i32;
+
+        let mut nodes: std::collections::HashSet<((i32, i32), Guard)> =
+            std::collections::HashSet::new();
+
+        loop {
+            let new_pos: (i32, i32);
+            match dir {
+                Guard::N => new_pos = (guard_pos.0 - 1, guard_pos.1),
+                Guard::S => new_pos = (guard_pos.0 + 1, guard_pos.1),
+                Guard::E => new_pos = (guard_pos.0, guard_pos.1 + 1),
+                Guard::W => new_pos = (guard_pos.0, guard_pos.1 - 1),
+            }
+
+            // Escaped
+            if new_pos.0 < 0 || new_pos.0 >= height || new_pos.1 < 0 || new_pos.1 >= width {
+                break;
+            }
+
+            // Step
+            match &map[new_pos.0 as usize][new_pos.1 as usize] {
+                Map::Visited => guard_pos = new_pos,
+                Map::NotVisited => {
+                    guard_pos = new_pos;
+                    map[new_pos.0 as usize][new_pos.1 as usize] = Map::Visited
+                }
+                // Don't move, just turn
+                Map::Obstacle => {
+                    let node = (new_pos, dir.clone());
+                    if nodes.contains(&node) {
+                        return WalkResult::Cycle;
+                    }
+                    nodes.insert(node);
+                    match dir {
+                        Guard::N => dir = Guard::E,
+                        Guard::E => dir = Guard::S,
+                        Guard::S => dir = Guard::W,
+                        Guard::W => dir = Guard::N,
+                    }
+                }
+            }
+        }
+
+        return WalkResult::Escape(
+            map.iter()
+                .flatten()
+                .filter(|spot| **spot == Map::Visited)
+                .count() as u32,
+        );
+    }
+
+    pub fn aoc_2024_06_02() {
+        // let file_path = "data/2024/06-example.txt";
+        let file_path = "data/2024/06.txt";
+        let file = std::fs::File::open(file_path).expect("file wasn't found.");
+        let reader = std::io::BufReader::new(file);
+
+        let mut map: Vec<Vec<Map>> = Vec::new();
+
+        let mut guard_pos = (0i32, 0i32);
+        let mut dir = Guard::N;
+
+        for (_row, line) in reader.lines().map(|l| l.unwrap()).enumerate() {
+            let mut row = vec![];
+            for (col, c) in line.chars().enumerate() {
+                match c {
+                    '.' => row.push(Map::NotVisited),
+                    '#' => row.push(Map::Obstacle),
+                    '^' => {
+                        row.push(Map::Visited);
+                        guard_pos = (_row as i32, col as i32);
+                        dir = Guard::N;
+                    }
+                    _ => unreachable!(),
+                }
+            }
+            map.push(row);
+        }
+
+        let mut cycles = 0u32;
+
+        for row in 0..map.len() {
+            for col in 0..map[0].len() {
+                match map[row][col] {
+                    Map::NotVisited => {
+                        let mut check_map = map.clone();
+                        check_map[row][col] = Map::Obstacle;
+                        match walk(check_map, guard_pos, dir) {
+                            WalkResult::Cycle => cycles += 1,
+                            _ => (),
+                        }
+                    }
+                    _ => (),
+                }
+            }
+        }
+
+        println!("Cycles: {}", cycles);
+    }
 }
