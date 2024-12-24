@@ -193,9 +193,9 @@ pub mod aoc_2024_03 {
     use nom::multi::{many0, many_till};
     use nom::sequence::{delimited, preceded, separated_pair};
     use nom::IResult;
-    
+
     use std::io::Read;
-    
+
     fn corrupted_parser(s: &str) -> IResult<&str, Vec<(Vec<char>, (i32, i32))>> {
         many0(many_till(
             anychar,
@@ -213,35 +213,35 @@ pub mod aoc_2024_03 {
             ),
         ))(s)
     }
-    
+
     pub fn aoc_2024_03_01() {
         // let file_path = "data/2024/03-example.txt";
         let file_path = "data/2024/03.txt";
         let file = std::fs::File::open(file_path).expect("file wasn't found.");
         let mut reader = std::io::BufReader::new(file);
-    
+
         let mut data: String = String::new();
-    
+
         reader.read_to_string(&mut data).unwrap();
-    
+
         let parsed = corrupted_parser(&data).unwrap();
-    
+
         let res = parsed
             .1
             .iter()
             .map(|t| t.1)
             .fold(0, |acc, e| acc + e.0 * e.1);
-    
+
         println!("Value: {}", res);
     }
-    
+
     #[derive(Debug, Clone, Copy)]
     pub enum MulState {
         Do,
         Dont,
         Mul(i32, i32),
     }
-    
+
     pub fn parse_mul(s: &str) -> IResult<&str, MulState> {
         let (remaining, (x, y)) = preceded(
             tag("mul"),
@@ -255,10 +255,10 @@ pub mod aoc_2024_03 {
                 tag(")"),
             ),
         )(s)?;
-    
+
         Ok((remaining, MulState::Mul(x, y)))
     }
-    
+
     fn corrupted_enabled_parser(s: &str) -> IResult<&str, Vec<(Vec<char>, MulState)>> {
         let res = many0(many_till(
             anychar,
@@ -268,26 +268,26 @@ pub mod aoc_2024_03 {
                 parse_mul,
             )),
         ))(s);
-    
+
         res
     }
-    
+
     pub fn aoc_2024_03_02() {
         // let file_path = "data/2024/03-example2.txt";
         let file_path = "data/2024/03.txt";
         let file = std::fs::File::open(file_path).expect("file wasn't found.");
         let mut reader = std::io::BufReader::new(file);
-    
+
         let mut data: String = String::new();
-    
+
         reader.read_to_string(&mut data).unwrap();
-    
+
         let parsed = corrupted_enabled_parser(&data).unwrap();
-    
+
         let mut res = 0;
-    
+
         let mut do_mul = true;
-    
+
         for (_, mul) in parsed.1.iter() {
             match mul {
                 MulState::Do => do_mul = true,
@@ -299,8 +299,197 @@ pub mod aoc_2024_03 {
                 }
             }
         }
-    
+
         println!("Value: {}", res);
     }
+}
 
+pub mod aoc_2024_04 {
+    use std::io::BufRead;
+
+    pub fn aoc_2024_04_01() {
+        // let file_path = "data/2024/04-example.txt";
+        let file_path = "data/2024/04.txt";
+        let file = std::fs::File::open(file_path).expect("file wasn't found.");
+        let reader = std::io::BufReader::new(file);
+
+        let mut data: Vec<Vec<char>> = Vec::new();
+
+        for line in reader.lines() {
+            data.push(line.unwrap().chars().collect());
+        }
+
+        let key: Vec<char> = "XMAS".chars().collect();
+
+        let key_len = key.len();
+
+        let mut amount = 0u32;
+
+        let height = data.len();
+        let width = data[0].len();
+
+        for (y, line) in data.iter().enumerate() {
+            for (x, c) in line.iter().enumerate() {
+                if *c != key[0] {
+                    continue;
+                }
+
+                // let can_E = width - (x) >= key_len;
+                // let can_W = x >= key_len;
+                // let can_S = height - (y) >= key_len;
+                // let can_N = (y) >= key_len;
+
+                // check E
+                let mut found = true;
+                for z in 1..key_len {
+                    if x + z >= width || data[y][x + z] != key[z] {
+                        found = false;
+                        break;
+                    }
+                }
+                if found {
+                    amount += 1;
+                }
+
+                // check NE
+                found = true;
+                for z in 1..key_len {
+                    if (y as i32 - z as i32) < 0 || x + z >= width || data[y - z][x + z] != key[z] {
+                        found = false;
+                        break;
+                    }
+                }
+                if found {
+                    amount += 1;
+                }
+
+                // check N
+                found = true;
+                for z in 1..key_len {
+                    if (y as i32 - z as i32) < 0 || data[y - z][x] != key[z] {
+                        found = false;
+                        break;
+                    }
+                }
+                if found {
+                    amount += 1;
+                }
+
+                // check NW
+                found = true;
+                for z in 1..key_len {
+                    if (y as i32 - z as i32) < 0
+                        || (x as i32 - z as i32) < 0
+                        || data[y - z][x - z] != key[z]
+                    {
+                        found = false;
+                        break;
+                    }
+                }
+                if found {
+                    amount += 1;
+                }
+
+                // check W
+                found = true;
+                for z in 1..key_len {
+                    if (x as i32 - z as i32) < 0 || data[y][x - z] != key[z] {
+                        found = false;
+                        break;
+                    }
+                }
+                if found {
+                    amount += 1;
+                }
+
+                // check SW
+                found = true;
+                for z in 1..key_len {
+                    if (x as i32 - z as i32) < 0 || y + z >= height || data[y + z][x - z] != key[z]
+                    {
+                        found = false;
+                        break;
+                    }
+                }
+                if found {
+                    amount += 1;
+                }
+
+                // check S
+
+                found = true;
+                for z in 1..key_len {
+                    if y + z >= height || data[y + z][x] != key[z] {
+                        found = false;
+                        break;
+                    }
+                }
+                if found {
+                    amount += 1;
+                }
+
+                // check SE
+                found = true;
+                for z in 1..key_len {
+                    if y + z >= height || x + z >= width || data[y + z][x + z] != key[z] {
+                        found = false;
+                        break;
+                    }
+                }
+                if found {
+                    amount += 1;
+                }
+            }
+        }
+
+        println!("Amount: {}", amount)
+    }
+
+    pub fn aoc_2024_04_02() {
+        // let file_path = "data/2024/04-example2.txt";
+        let file_path = "data/2024/04.txt";
+        let file = std::fs::File::open(file_path).expect("file wasn't found.");
+        let reader = std::io::BufReader::new(file);
+
+        let mut data: Vec<Vec<char>> = Vec::new();
+
+        for line in reader.lines() {
+            data.push(line.unwrap().chars().collect());
+        }
+
+        // let key: Vec<char> = "XMAS".chars().collect();
+
+        // let key_len = key.len();
+
+        let mut amount = 0u32;
+
+        let height = data.len();
+        let width = data[0].len();
+
+        for (y, line) in data.iter().enumerate() {
+            for (x, c) in line.iter().enumerate() {
+                if *c != 'A'
+                    || x + 1 >= width
+                    || x as i32 - 1 < 0
+                    || y + 1 >= height
+                    || y as i32 - 1 < 0
+                {
+                    continue;
+                }
+
+                let NE = data[y - 1][x + 1];
+                let SE = data[y + 1][x + 1];
+                let NW = data[y - 1][x - 1];
+                let SW = data[y + 1][x - 1];
+
+                if ((NE == 'M' && SW == 'S') || (NE == 'S' && SW == 'M'))
+                    && ((NW == 'M' && SE == 'S') || (NW == 'S' && SE == 'M'))
+                {
+                    amount += 1;
+                }
+            }
+        }
+
+        println!("Amount: {}", amount)
+    }
 }
